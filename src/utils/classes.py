@@ -1,8 +1,9 @@
 import tensorflow as tf
 from nltk.translate.bleu_score import sentence_bleu, SmoothingFunction
-from Mylib import myfuncs
+from Mylib import myfuncs, tf_myfuncs
 import numpy as np
 import pandas as pd
+from src.utils import funcs
 
 
 class BleuScoreCustomMetric(tf.keras.metrics.Metric):
@@ -13,7 +14,7 @@ class BleuScoreCustomMetric(tf.keras.metrics.Metric):
     def update_state(self, y_true, y_pred, sample_weight=None):
         y_pred = tf.argmax(y_pred, axis=-1)  # Convert về giống shape của y_true
 
-        list_bleu_on_1batch = self.get_bleu(y_true, y_pred)
+        list_bleu_on_1batch = funcs.get_list_bleu_for_true_pred(y_true, y_pred)
         self.list_bleu += (
             list_bleu_on_1batch  # Thêm batch mới vào kết quả cuối cùng của epoch
         )
@@ -23,23 +24,6 @@ class BleuScoreCustomMetric(tf.keras.metrics.Metric):
 
     def reset_state(self):  # Trước khi vào epoch mới
         self.list_bleu = []
-
-    def get_values_g1(self, tensor):
-        filtered = tf.boolean_mask(tensor, tensor > 1)
-        filtered = filtered.numpy().astype("str").tolist()
-        return filtered
-
-    def get_bleu(self, y_true, y_pred):
-        words_in_true = [self.get_values_g1(item) for item in y_true]
-        words_in_pred = [self.get_values_g1(item) for item in y_pred]
-
-        smooth = SmoothingFunction()
-        list_bleu = [
-            sentence_bleu([ref], pred, smoothing_function=smooth.method1)
-            for ref, pred in zip(words_in_true, words_in_pred)
-        ]
-
-        return list_bleu
 
 
 class CustomisedModelCheckpoint(tf.keras.callbacks.Callback):
@@ -129,4 +113,60 @@ class CustomisedModelCheckpoint(tf.keras.callbacks.Callback):
         best_model.save(self.filepath)
         myfuncs.save_python_object(
             self.scoring_path, (best_model_train_scoring, best_model_val_scoring)
+        )
+
+
+class MachineTranslationEvaluator:
+    """Dùng để đánh giá tổng quát bài toán Dịch Máy <br>
+    Đánh giá chỉ số BLEU
+
+    Args:
+        model (_type_): _description_
+        train_ds (_type_): _description_
+        val_ds (_type_, optional): Nếu None thì chỉ đánh giá trên 1 tập thôi (tập test). Defaults to None.
+    """
+
+    def __init__(self, model, train_ds, val_ds=None):
+        self.model = model
+        self.train_ds = train_ds
+        self.val_ds = val_ds
+
+    def evaluate_train_classifier(self):
+        # Get thực tế và dự đoán
+        train_target, train_pred = tf_myfuncs.get_full_target_and_pred_for_DLmodel(
+            self.model, self.train_ds
+        )
+        val_target, val_pred = tf_myfuncs.get_full_target_and_pred_for_DLmodel(
+            self.model, self.val_ds
+        )
+
+        # Đánh giá: bleu + ...
+        train_bleu = np.mean(
+            funcs.get_list_bleu_for_true_pred(train_target, train_pred)
+        )  # Lấy trung bình
+        val_bleu = np.mean(funcs.get_list_bleu_for_true_pred(val_target, val_pred))
+
+        result = f"Train BLEU: {train_bleu}\n"
+        result += f"Val BLEU: {val_bleu}\n"
+
+        return result
+
+    def evaluate_test_classifier(self):
+        # Get thực tế và dự đoán
+        test_target, test_pred = tf_myfuncs.get_full_target_and_pred_for_DLmodel(
+            self.model, self.train_ds
+        )
+
+        # Đánh giá: bleu + ...
+        test_bleu = np.mean(funcs.get_list_bleu_for_true_pred(test_target, test_pred))
+
+        result = f"Test BLEU: {test_bleu}\n"
+
+        return result
+
+    def evaluate(self):
+        return (
+            self.evaluate_train_classifier()
+            if self.val_ds is not None
+            else self.evaluate_test_classifier()
         )
