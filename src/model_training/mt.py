@@ -1,7 +1,7 @@
 import tensorflow as tf
 import time
 from Mylib import tf_myfuncs, myfuncs
-from src.utils import classes
+from src.utils import classes, funcs
 
 
 def load_data(data_transformation_path):
@@ -108,9 +108,6 @@ def train_and_save_GRU_models(
 ):
     tf.config.run_functions_eagerly(True)  # Bật eager execution
     tf.data.experimental.enable_debug_mode()  # Bật chế độ eager cho tf.data
-    tf.keras.utils.get_custom_objects()[
-        "bleu"
-    ] = classes.BleuScoreCustomMetric  # đăng kí cho metric bleu
 
     # TODO: d
     print("Update lần 1")
@@ -130,7 +127,11 @@ def train_and_save_GRU_models(
         model_optimizer = tf_myfuncs.copy_one_optimizer(optimizer)
 
         # Compile model trước khi training
-        model.compile(optimizer=model_optimizer, loss=loss, metrics=[scoring])
+        model.compile(
+            optimizer=model_optimizer,
+            loss=loss,
+            metrics=[funcs.get_metric_object_by_name(scoring)],
+        )
 
         # Create callbacks cho model
         model_callbacks = create_callbacks(
