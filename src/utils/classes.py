@@ -14,7 +14,9 @@ class BleuScoreCustomMetric(tf.keras.metrics.Metric):
         y_pred = tf.argmax(y_pred, axis=-1)  # Convert về giống shape của y_true
 
         list_bleu_on_1batch = self.get_bleu(y_true, y_pred)
-        self.list_bleu.append(list_bleu_on_1batch)
+        self.list_bleu += (
+            list_bleu_on_1batch  # Thêm batch mới vào kết quả cuối cùng của epoch
+        )
 
     def result(self):  # Tính toán vào cuối epoch
         return tf.reduce_mean(self.list_bleu)
