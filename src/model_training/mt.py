@@ -3,6 +3,9 @@ import time
 from Mylib import tf_myfuncs, myfuncs
 from src.utils import classes
 
+# Đăng kí cho metric bleu
+tf.keras.utils.get_custom_objects()["bleu"] = classes.BleuScoreCustomMetric
+
 
 def load_data(data_transformation_path):
     train_ds = tf.data.Dataset.load(f"{data_transformation_path}/train_ds")
