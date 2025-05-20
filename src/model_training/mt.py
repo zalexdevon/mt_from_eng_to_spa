@@ -51,6 +51,59 @@ def create_GRU_model_from_layers(model):
     return seq2seq_rnn
 
 
+def create_Transformer_model_from_layers(model):
+    # Tạo phần encoder
+    encoder = model["encoder"]
+    encoder_inputs = encoder[0]
+    x = encoder_inputs
+
+    for layer in encoder[1:-1]:
+        x = layer(x)
+
+    encoder_outputs = encoder[-1](x)
+
+    # Tạo phần decoder
+    decoder = model["decoder"]
+    ## Start decoder
+    decoder_start = decoder["start"]
+    decoder_inputs = decoder_start[0]
+    x = decoder_inputs
+    for layer in decoder_start[1:]:
+        x = layer(x)
+
+    ## Mid decoder
+    decoder_mid = decoder["mid"]
+    for layer in decoder_mid:
+        x = layer(x, encoder_outputs)
+
+    ## End decoder
+    decoder_end = decoder["end"]
+    for layer in decoder_end[:-1]:
+        x = layer(x)
+
+    decoder_outputs = decoder_end[-1](x)
+
+    # Create model
+    model = tf.keras.Model(
+        inputs=[encoder_inputs, decoder_inputs], outputs=decoder_outputs
+    )
+
+    return model
+
+
+def create_and_save_Transformer_models_before_training(
+    model_training_path,
+    model_indices,
+    models,
+):
+    for model_index, model in zip(model_indices, models):
+        model_path = f"{model_training_path}/{model_index}.keras"
+        model = create_Transformer_model_from_layers(model)
+
+        # Save model
+        model.save(model_path)
+
+
 def create_and_save_GRU_models_before_training(
     model_training_path,
     model_indices,
@@ -92,7 +145,7 @@ def get_train_val_scoring_to_plot(train_scoring, val_scoring, scoring):
     return train_scoring, val_scoring
 
 
-def train_and_save_GRU_models(
+def train_and_save_models(
     model_training_path,
     model_indices,
     train_ds,
