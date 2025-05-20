@@ -3,9 +3,6 @@ import time
 from Mylib import tf_myfuncs, myfuncs
 from src.utils import classes
 
-# Đăng kí cho metric bleu
-tf.keras.utils.get_custom_objects()["bleu"] = classes.BleuScoreCustomMetric
-
 
 def load_data(data_transformation_path):
     train_ds = tf.data.Dataset.load(f"{data_transformation_path}/train_ds")
@@ -111,6 +108,13 @@ def train_and_save_GRU_models(
 ):
     tf.config.run_functions_eagerly(True)  # Bật eager execution
     tf.data.experimental.enable_debug_mode()  # Bật chế độ eager cho tf.data
+    tf.keras.utils.get_custom_objects()[
+        "bleu"
+    ] = classes.BleuScoreCustomMetric  # đăng kí cho metric bleu
+
+    # TODO: d
+    print("Update lần 1")
+    # d
 
     print(f"===========Bắt đầu train model name = {model_name}===============\n")
     start_time = time.time()  # Bắt đầu tính thời gian train model
