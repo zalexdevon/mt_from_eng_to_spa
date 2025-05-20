@@ -110,7 +110,7 @@ def train_and_save_GRU_models(
     tf.data.experimental.enable_debug_mode()  # Bật chế độ eager cho tf.data
 
     # TODO: d
-    print("Update lần 1")
+    print("Update file mt.py lần 2")
     # d
 
     print(f"===========Bắt đầu train model name = {model_name}===============\n")
