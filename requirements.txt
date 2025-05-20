@@ -1,1 +1,1 @@
-zzzz_mylib_23_4==0.95
+zzzz_mylib_23_4==0.96
